@@ -1,0 +1,16 @@
+{
+	"required": true,
+	"package": "com.sulfurphysics.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": [
+		"LivingEntityRendererMixin",
+		"SulfurCubeRenderStateMixin",
+		"SulfurCubeRendererMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}

@@ -1,0 +1,18 @@
+{
+	"required": true,
+	"package": "com.sulfurphysics.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"mixins": [
+		"SulfurCubePhysicsMixin",
+		"SulfurCubeAiMixin",
+		"SulfurCubePhysicsDataMixin",
+		"SulfurCubeKnockbackMixin",
+		"SulfurCubeBoundingBoxMixin"
+	],
+	"injectors": {
+		"defaultRequire": 1
+	},
+	"overwrites": {
+		"requireAnnotations": true
+	}
+}
