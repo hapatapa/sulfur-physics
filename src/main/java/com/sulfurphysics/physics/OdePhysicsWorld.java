@@ -100,6 +100,10 @@ public class OdePhysicsWorld {
         PREV_RENDER_QUATERNION.remove(uuid);
         PhysicsBody pb = bodies.remove(uuid);
         if (pb != null) {
+            PhysicsDataKeys.setPhysicsQw(pb.entity, 1.0f);
+            PhysicsDataKeys.setPhysicsQx(pb.entity, 0.0f);
+            PhysicsDataKeys.setPhysicsQy(pb.entity, 0.0f);
+            PhysicsDataKeys.setPhysicsQz(pb.entity, 0.0f);
             pb.geom.destroy();
             pb.body.destroy();
             SulfurPhysics.LOGGER.info("Removed physics body for entity {}", uuid);
