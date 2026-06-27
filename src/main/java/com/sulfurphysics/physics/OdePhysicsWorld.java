@@ -409,7 +409,7 @@ public class OdePhysicsWorld {
             for (PhysicsBody pb : bodies.values()) {
                 DBody body = pb.body();
                 DQuaternionC q = body.getQuaternion();
-                RENDER_QUATERNION.put(pb.entity().getUUID(), new float[]{(float)q.get1(), (float)q.get2(), (float)q.get3(), (float)q.get0()});
+                RENDER_QUATERNION.put(pb.entity().getUUID(), new float[]{(float)-q.get1(), (float)q.get2(), (float)q.get3(), (float)q.get0()});
             }
         }
 
@@ -431,7 +431,7 @@ public class OdePhysicsWorld {
             LivingEntity entity = pb.entity();
 
             DQuaternionC q = body.getQuaternion();
-            float qw = (float)q.get0(), qx = (float)q.get1(), qy = (float)q.get2(), qz = (float)q.get3();
+            float qw = (float)q.get0(), qx = (float)-q.get1(), qy = (float)q.get2(), qz = (float)q.get3();
             PhysicsDataKeys.setPhysicsQw(entity, qw);
             PhysicsDataKeys.setPhysicsQx(entity, qx);
             PhysicsDataKeys.setPhysicsQy(entity, qy);
