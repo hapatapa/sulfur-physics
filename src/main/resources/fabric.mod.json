@@ -3,15 +3,14 @@
 	"id": "sulfur-physics",
 	"version": "${version}",
 	"name": "Sulfur Physics",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "Rigid body physics engine for SulfurCubes, powered by ode4j.",
 	"authors": [
-		"Me!"
+		"hapatapa"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/hapatapa/sulfur-physics"
 	},
-	"license": "CC0-1.0",
+	"license": "MIT",
 	"icon": "assets/sulfur-physics/icon.png",
 	"environment": "*",
 	"entrypoints": {
