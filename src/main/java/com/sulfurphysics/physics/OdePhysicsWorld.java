@@ -2,11 +2,18 @@ package com.sulfurphysics.physics;
 
 import com.sulfurphysics.SulfurPhysics;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.cubemob.SulfurCube;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -46,7 +53,36 @@ public class OdePhysicsWorld {
     private static final double GRAB_MAX_FORCE = 400.0;
     private final Map<UUID, UUID> grabbedEntities = new HashMap<>(); // playerUUID -> entityUUID
 
+    private static final Map<String, Float> ARCHETYPE_DAMAGES = Map.ofEntries(
+        Map.entry("regular", 2.0f),
+        Map.entry("bouncy", 1.5f),
+        Map.entry("slow_bouncy", 4.0f),
+        Map.entry("slow_flat", 5.0f),
+        Map.entry("fast_flat", 1.0f),
+        Map.entry("light", 0.5f),
+        Map.entry("fast_sliding", 1.5f),
+        Map.entry("slow_sliding", 1.0f),
+        Map.entry("high_resistance", 0.5f),
+        Map.entry("sticky", 0.5f),
+        Map.entry("explosive", 3.0f),
+        Map.entry("hot", 3.0f)
+    );
+
     private record PhysicsBody(DBody body, DGeom geom, LivingEntity entity) {}
+
+    private record HitEntry(LivingEntity entity, LivingEntity attacker, double speed) {}
+
+    private double getBaseDamage(SulfurCube cube) {
+        if (!cube.hasBodyItem()) return 0;
+        ItemStack bodyItem = cube.getItemBySlot(EquipmentSlot.BODY);
+        if (bodyItem.isEmpty()) return 2.0f;
+        for (Map.Entry<String, Float> entry : ARCHETYPE_DAMAGES.entrySet()) {
+            TagKey<Item> tagKey = TagKey.create(Registries.ITEM,
+                Identifier.fromNamespaceAndPath("minecraft", "sulfur_cube_archetype/" + entry.getKey()));
+            if (bodyItem.is(tagKey)) return entry.getValue();
+        }
+        return 2.0f;
+    }
 
     public void init() {
         if (initialized) return;
@@ -308,7 +344,8 @@ public class OdePhysicsWorld {
             }
         }
 
-        // 5b. Physics step loop: collide + forces + step + rotation send
+        // 5b. Physics step loop: collide + forces + step + entity collision
+        Map<UUID, HitEntry> hitEntities = new HashMap<>();
         for (int step = 0; step < STEPS_PER_TICK; step++) {
             contactGroup.empty();
             space.collide(null, this::nearCallback);
@@ -334,6 +371,40 @@ public class OdePhysicsWorld {
 
             world.quickStep(STEP_DT);
 
+            // Entity-vs-entity collision: push non-physics entities, track damage
+            for (PhysicsBody pb : bodies.values()) {
+                DBody body = pb.body();
+                LivingEntity entity = pb.entity();
+                if (!(entity instanceof SulfurCube cube)) continue;
+
+                DVector3C p = body.getPosition();
+                double h = entity.getBbHeight();
+                entity.setPos(p.get0(), p.get1() - h / 2.0, p.get2());
+
+                AABB cubeBox = entity.getBoundingBox();
+                Vec3 cubeVel = new Vec3(
+                    body.getLinearVel().get0() / 20.0,
+                    body.getLinearVel().get1() / 20.0,
+                    body.getLinearVel().get2() / 20.0
+                );
+
+                for (Entity other : level.getEntities(entity, cubeBox.inflate(0.5),
+                        e -> e instanceof LivingEntity && e.isAlive()
+                          && !bodies.containsKey(e.getUUID()))) {
+                    LivingEntity target = (LivingEntity) other;
+                    Vec3 targetVel = target.getDeltaMovement();
+                    Vec3 relativeVel = cubeVel.subtract(targetVel);
+                    double speed = relativeVel.length();
+                    if (speed < 0.05) continue;
+
+                    Vec3 knockback = relativeVel.scale(0.5);
+                    target.setDeltaMovement(targetVel.add(knockback));
+
+                    hitEntities.merge(other.getUUID(), new HitEntry(target, entity, speed),
+                        (a, b) -> a.speed >= b.speed ? a : b);
+                }
+            }
+
             // Per-step: publish quaternion for render thread
             for (PhysicsBody pb : bodies.values()) {
                 DBody body = pb.body();
@@ -342,7 +413,19 @@ public class OdePhysicsWorld {
             }
         }
 
-        // 6. After all steps: read back position, final rotation, velocity
+        // 6. Apply entity damage (once per tick, max velocity) + read back final state
+        if (level instanceof ServerLevel serverLevel && !hitEntities.isEmpty()) {
+            for (HitEntry entry : hitEntities.values()) {
+                if (!(entry.attacker instanceof SulfurCube cube)) continue;
+                float baseDmg = (float) getBaseDamage(cube);
+                float damage = baseDmg * (float) entry.speed;
+                if (damage >= 1.0f) {
+                    entry.entity.hurtServer(serverLevel, entry.entity.damageSources().mobAttack(cube), damage);
+                }
+            }
+        }
+
+        // 6b. After all steps: read back position, final rotation, velocity
         for (PhysicsBody pb : bodies.values()) {
             DBody body = pb.body();
             LivingEntity entity = pb.entity();
