@@ -409,7 +409,9 @@ public class OdePhysicsWorld {
             for (PhysicsBody pb : bodies.values()) {
                 DBody body = pb.body();
                 DQuaternionC q = body.getQuaternion();
-                RENDER_QUATERNION.put(pb.entity().getUUID(), new float[]{(float)-q.get1(), (float)q.get2(), (float)q.get3(), (float)q.get0()});
+                // compensate for pipeline: R_y(180) * diag(-1,-1,1) = diag(1,-1,-1) = R_x(180°)
+                // corrected = R_x(180°) * q_ode = (0,1,0,0) * (qw,qx,qy,qz) = (-qx, qw, -qz, qy)
+                RENDER_QUATERNION.put(pb.entity().getUUID(), new float[]{(float)q.get0(), (float)-q.get3(), (float)q.get2(), (float)-q.get1()});
             }
         }
 
@@ -431,7 +433,8 @@ public class OdePhysicsWorld {
             LivingEntity entity = pb.entity();
 
             DQuaternionC q = body.getQuaternion();
-            float qw = (float)q.get0(), qx = (float)-q.get1(), qy = (float)q.get2(), qz = (float)q.get3();
+            // corrected = R_x(180°) * q_ode = (-qx, qw, -qz, qy) in (w,x,y,z)
+            float qw = (float)-q.get1(), qx = (float)q.get0(), qy = (float)-q.get3(), qz = (float)q.get2();
             PhysicsDataKeys.setPhysicsQw(entity, qw);
             PhysicsDataKeys.setPhysicsQx(entity, qx);
             PhysicsDataKeys.setPhysicsQy(entity, qy);
@@ -444,6 +447,8 @@ public class OdePhysicsWorld {
 
             DVector3C v = body.getLinearVel();
             entity.setDeltaMovement(new Vec3(v.get0() / 20.0, v.get1() / 20.0, v.get2() / 20.0));
+
+            entity.setYRot(0);
 
             Double vyBefore = preStepVy.get(entity.getUUID());
             if (vyBefore != null && vyBefore < -0.1 && Math.abs(v.get1()) < 0.2) {

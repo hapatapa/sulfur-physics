@@ -33,18 +33,21 @@ public class SulfurCubeRendererMixin {
             } else {
                 q = new Quaternionf(quat[0], quat[1], quat[2], quat[3]);
             }
+
             ((PhysicsQuaternionContainer) state).setPhysicsQuaternion(q);
             state.bodyRot = 0;
             state.yRot = 0;
             state.xRot = 0;
+            entity.setYRot(0);
             ((PhysicsRollContainer) state).setPhysicsRoll(0);
         } else {
             float qw = PhysicsDataKeys.getPhysicsQw(entity);
             float qx = PhysicsDataKeys.getPhysicsQx(entity);
             float qy = PhysicsDataKeys.getPhysicsQy(entity);
             float qz = PhysicsDataKeys.getPhysicsQz(entity);
-            if (qw != 1.0f || qx != 0.0f || qy != 0.0f || qz != 0.0f) {
-                ((PhysicsQuaternionContainer) state).setPhysicsQuaternion(new Quaternionf(qx, qy, qz, qw));
+                if (qw != 1.0f || qx != 0.0f || qy != 0.0f || qz != 0.0f) {
+                    Quaternionf q = new Quaternionf(qx, qy, qz, qw);
+                ((PhysicsQuaternionContainer) state).setPhysicsQuaternion(q);
                 state.bodyRot = 0;
                 state.yRot = 0;
                 state.xRot = 0;
