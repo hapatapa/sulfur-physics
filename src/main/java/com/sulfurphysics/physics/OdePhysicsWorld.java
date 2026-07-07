@@ -154,6 +154,18 @@ public class OdePhysicsWorld {
         }
     }
 
+    public void applyPistonPush(UUID uuid, net.minecraft.core.Direction dir, double distance) {
+        PhysicsBody pb = bodies.get(uuid);
+        if (pb != null) {
+            double odeVel = distance * 20.0;
+            pb.body.setLinearVel(
+                dir.getStepX() * odeVel,
+                dir.getStepY() * odeVel,
+                dir.getStepZ() * odeVel
+            );
+        }
+    }
+
     public void applyForce(UUID uuid, Vec3 force) {
         PhysicsBody pb = bodies.get(uuid);
         if (pb != null) {
